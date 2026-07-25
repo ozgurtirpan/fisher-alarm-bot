@@ -29,19 +29,29 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 PAIRS = {
     "EURUSD": "EURUSD=X",
-    "GBPUSD": "GBPUSD=X",
-    "USDJPY": "USDJPY=X",
-    "USDTRY": "USDTRY=X",
-    "GBPJPY": "GBPJPY=X",
-    "AUDUSD": "AUDUSD=X",
+    "AVAXUSD": "AVAX-USD",
 }
 
-INTERVAL = "1h"
-LOOKBACK_PERIOD = "5d"
+FETCH_INTERVAL = "1h"      # Yahoo Finance'ten çekilecek ham veri periyodu (4h Yahoo'da doğrudan yok)
+LOOKBACK_PERIOD = "60d"    # 4 saatlik mumlar için yeterli geçmiş veri (60 gün ~ 360 adet 4h mum)
+RESAMPLE_TO = "4h"         # Ham 1 saatlik veriyi bu periyoda grupluyoruz
 FISHER_LENGTH = 9
 STATE_FILE = "state.json"
 
 # =======================================
+
+
+def resample_to_target(df: pd.DataFrame, target: str) -> pd.DataFrame:
+    """1 saatlik ham veriyi istenen periyoda (örn. 4 saat) gruplar."""
+    resampled = df.resample(target).agg({
+        "Open": "first",
+        "High": "max",
+        "Low": "min",
+        "Close": "last",
+        "Volume": "sum",
+    })
+    resampled = resampled.dropna(subset=["Open", "High", "Low", "Close"])
+    return resampled
 
 
 def fisher_transform(df: pd.DataFrame, length: int = 9) -> pd.DataFrame:
@@ -123,12 +133,18 @@ def save_state(state: dict) -> None:
 
 def check_pair(pair_name: str, ticker: str, state: dict) -> None:
     try:
-        data = yf.download(ticker, period=LOOKBACK_PERIOD, interval=INTERVAL, progress=False)
-        if isinstance(data.columns, pd.MultiIndex):
-            data.columns = data.columns.get_level_values(0)
+        raw_data = yf.download(ticker, period=LOOKBACK_PERIOD, interval=FETCH_INTERVAL, progress=False)
+        if isinstance(raw_data.columns, pd.MultiIndex):
+            raw_data.columns = raw_data.columns.get_level_values(0)
+
+        if raw_data.empty:
+            print(f"[{pair_name}] Yetersiz veri, atlanıyor.")
+            return
+
+        data = resample_to_target(raw_data, RESAMPLE_TO)
 
         if data.empty or len(data) < FISHER_LENGTH + 2:
-            print(f"[{pair_name}] Yetersiz veri, atlanıyor.")
+            print(f"[{pair_name}] Resample sonrası yetersiz veri, atlanıyor.")
             return
 
         data = fisher_transform(data, FISHER_LENGTH)
