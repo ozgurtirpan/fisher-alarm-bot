@@ -28,7 +28,7 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 PAIRS = {
-    "EURUSD": "EURUSD=X",
+    "NATGAS": "NG=F",
     "AVAXUSD": "AVAX-USD",
 }
 
