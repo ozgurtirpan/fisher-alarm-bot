@@ -3,7 +3,7 @@ name: Fisher Transform Alarm Botu
 on:
   schedule:
     # Her 15 dakikada bir çalışır (UTC saatine göredir, GitHub'ın standart formatı)
-    - cron: "*/15 * * * *"
+    - cron: "*/0 * * * *"
   workflow_dispatch: {}
     # Bu satır sayesinde "Actions" sekmesinden manuel olarak da "Run workflow" ile tetikleyebilirsin
 
