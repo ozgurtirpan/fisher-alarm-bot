@@ -1,0 +1,40 @@
+name: Fisher Transform Alarm Botu
+
+on:
+  schedule:
+    # Her 15 dakikada bir çalışır (UTC saatine göredir, GitHub'ın standart formatı)
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+    # Bu satır sayesinde "Actions" sekmesinden manuel olarak da "Run workflow" ile tetikleyebilirsin
+
+permissions:
+  contents: write   # state.json dosyasını geri repoya yazabilmek için gerekli
+
+jobs:
+  check-fisher:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repoyu indir
+        uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Kütüphaneleri yükle
+        run: pip install yfinance pandas numpy requests
+
+      - name: Botu çalıştır
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python fisher_bot_action.py
+
+      - name: Güncellenen state.json dosyasını kaydet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json
+          git diff --staged --quiet || git commit -m "state güncellendi"
+          git push
