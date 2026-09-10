@@ -2,8 +2,8 @@ name: Fisher Transform Alarm Botu
 
 on:
   schedule:
-    # Her saat başı çalışır (UTC saatine göredir). 4 saatlik mumlar için bu sıklık yeterli.
-    - cron: "0 * * * *"
+    # Her saatin 5. dakikasında çalışır (mum tam saatte kapanır, veri yayınlanması için birkaç dakika pay bırakıyoruz)
+    - cron: "5 * * * *"
   workflow_dispatch: {}
     # Bu satır sayesinde "Actions" sekmesinden manuel olarak da "Run workflow" ile tetikleyebilirsin
 
