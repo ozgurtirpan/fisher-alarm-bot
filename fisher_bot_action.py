@@ -32,9 +32,9 @@ PAIRS = {
     "AVAXUSD": "AVAX-USD",
 }
 
-FETCH_INTERVAL = "1h"      # Yahoo Finance'ten çekilecek ham veri periyodu (4h Yahoo'da doğrudan yok)
-LOOKBACK_PERIOD = "60d"    # 4 saatlik mumlar için yeterli geçmiş veri (60 gün ~ 360 adet 4h mum)
-RESAMPLE_TO = "4h"         # Ham 1 saatlik veriyi bu periyoda grupluyoruz
+FETCH_INTERVAL = "1h"      # Yahoo Finance'ten çekilecek ham veri periyodu
+LOOKBACK_PERIOD = "10d"    # 1 saatlik mumlar için yeterli geçmiş veri
+RESAMPLE_TO = "1h"         # Artık ham veriyle aynı periyot, ama kapanmış-mum kontrolü hala çalışır
 FISHER_LENGTH = 9
 STATE_FILE = "state.json"
 
@@ -145,6 +145,21 @@ def check_pair(pair_name: str, ticker: str, state: dict) -> None:
 
         if data.empty or len(data) < FISHER_LENGTH + 2:
             print(f"[{pair_name}] Resample sonrası yetersiz veri, atlanıyor.")
+            return
+
+        # Son mum henüz tamamlanmamış (oluşmakta olan) bir mum olabilir.
+        # Bunu analiz dışı bırakmazsak, sinyal daha mum kapanmadan "erken" tetiklenip
+        # sonra sessizce değişebilir (repainting sorunu). Sadece kapanmış mumları kullan.
+        now_utc = pd.Timestamp.now(tz="UTC")
+        last_bin_start = data.index[-1]
+        if last_bin_start.tzinfo is None:
+            last_bin_start = last_bin_start.tz_localize("UTC")
+        last_bin_end = last_bin_start + pd.Timedelta(RESAMPLE_TO)
+        if last_bin_end > now_utc:
+            data = data.iloc[:-1]
+
+        if data.empty or len(data) < FISHER_LENGTH + 2:
+            print(f"[{pair_name}] Kapanmış mum sayısı yetersiz, atlanıyor.")
             return
 
         data = fisher_transform(data, FISHER_LENGTH)
